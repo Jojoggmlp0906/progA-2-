@@ -1,6 +1,7 @@
 def cadastrarcliente(nome):
     cliente = nome
     return cliente
+saldo = 0
 def consultar_saldo(saldo):
     print(saldo)
 def fazerdeposito(saldo, deposito):
@@ -9,19 +10,24 @@ def fazerdeposito(saldo, deposito):
 def fazersaque(saldo, saque):
     total_saque = saldo - saque
     return total_saque
-saldo = 0
-nome = input("Digite o nome do cliente")
+nome = input("Digite o nome do cliente: ")
 print(f'o cadastro do cliente {cadastrarcliente(nome)} foi realizado')
-conta = input("Crie uma conta")
-opcao = input("Digite o número correspondente a opção\n 0 - Para consultar saldo\n 1 - Para fazer um depósito\n 2- Para fazer um saque")
-
-if opcao == "0":
-    print(consultar_saldo(saldo))
-if opcao == "1":
-    valor_deposito = float(input("Digite o valor do depósito: "))
-    novo_valor = fazerdeposito(saldo, valor_deposito)
-    saldo = novo_valor
-if opcao == "2":
-    valor_saque = float(input("Digite o valor do saque"))
-    novo_valor = fazersaque(saldo, valor_saque)
-    saldo = novo_valor
+conta = input("Crie uma conta: ")
+opcao = input("Digite o número correspondente a opção\n 0 - Para consultar saldo\n 1 - Para fazer um depósito\n 2- Para fazer um saque \n 3 - Para sair \n ")
+while opcao != 3:
+    if opcao == "0":
+        print(consultar_saldo(saldo))
+    if opcao == "1":
+        valor_deposito = float(input("Digite o valor do depósito: "))
+        novo_valor = fazerdeposito(saldo, valor_deposito)
+        saldo = novo_valor
+    if opcao == "2":
+        valor_saque = float(input("Digite o valor do saque: "))
+        novo_valor = fazersaque(saldo, valor_saque)
+        saldo = novo_valor
+    opcao = input("Digite o número correspondente a opção\n 0 - Para consultar saldo\n 1 - Para fazer um depósito\n 2- Para fazer um saque \n 3 - Para sair \n")
+    if opcao == "3":
+        print("Obrigado por utilizar nosso sistema")
+        break
+    
+    
