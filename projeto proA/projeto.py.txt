@@ -27,6 +27,9 @@ while opcao != 3:
     valor_saque = float(input("Digite o valor do saque: "))
     novo_valor = fazersaque(saldo, valor_saque)
     saldo = novo_valor
+  if opcao == "3":
+    print("Obrigado por usar nosso sistema!")
+    break
   opcao = input("Digite o número correspondente a opção\n 0 - Para consultar saldo\n 1 - Para fazer um depósito\n 2- Para fazer um saque\n 3- Para fechar o programa\n\n ")
   if opcao == "3":
     print("Obrigado por usar nosso sistema!")
