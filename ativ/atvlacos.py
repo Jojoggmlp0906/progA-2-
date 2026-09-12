@@ -103,7 +103,7 @@ while paisA < paisB:
         paisB = calcular_nat(paisB, taxaB)
 print(f"Serão necessários {ano} anos, para ultrapassar.")
 Lembrar: o while guarda as informações mesmo depois de acabar!!!
-"""
+
 #10ª Questão
 def det_total(quant, tipo):
     if tipo == "residencial":
@@ -148,5 +148,25 @@ if contador_res > 0:
 if contador_com > 0:
     print(f"A média de consumo comercial foi: {calcular_media(total_com, contador_com)}")
 
+#Questão 11
+for num in range(10):
+    num = float(input("Digite um número positivo: "))
+    while num < 0:
+        num = float(input("Digite um número novamente, pois o anterior é negativo: "))
+    print(f"A raiz quadrada é: {num**0.5:.2f}")
 
-    
+#Questão 12
+contador_me21 = 0
+contador_ma50 = 0
+while True:
+    idade=int(input("Digite a idade: "))
+    if idade < 0:
+        break   
+    if idade < 21:
+        contador_me21 += 1
+    if idade > 50:
+        contador_ma50 +=1
+print(f"O total de pessoas menores de 21 anos é: {contador_me21}")
+print(f"O total de pessoas maiores de 50 anos é: {contador_ma50}")
+"""
+#Questão14
