@@ -168,5 +168,112 @@ while True:
         contador_ma50 +=1
 print(f"O total de pessoas menores de 21 anos é: {contador_me21}")
 print(f"O total de pessoas maiores de 50 anos é: {contador_ma50}")
-"""
+
 #Questão14
+while True:
+    num = float(input("Verifique se o número é um quadrado perfeito: "))
+    raiz = num**0.5
+    while num < 0 :
+        num = float(input("Digite novamente pois o número anterior é menor que zero: "))
+        raiz = num**0.5
+    if raiz == int(raiz):
+        print(f"{num} É um quadrado perfeito")
+        break
+    else:
+        print(f"{num} Não é um quadrado perfeito")
+        break
+
+#Questão 15
+while True:
+    num = int(input("Verifique se um número é primo: "))
+    resultado = True
+    for i in range(2, num):
+        if num % i == 0:
+            resultado = False
+            break
+    if resultado == True:
+        print(f"{num} é um número primo")
+        break
+    if resultado == False:
+        print(f"{num} não é um número primo")
+        break
+            
+
+#Questão 16
+maior = 0
+while True:
+    num = float(input("Digite um número:\n (Digite -9999 para finalizar)\n"))
+    if num == -9999:
+        break
+    if num > maior:
+        maior = num
+if maior > 0:
+    print(f"{maior} é o maior número digitado")
+
+#Questão 17
+total_contas = 0
+contas_negativas = 0
+contas_positivas = 0
+while True:
+    n_conta = int(input("Digite o número da conta: "))
+    if n_conta < 0:
+        break
+    saldo = float(input("Digite o saldo da conta: "))
+    total_contas +=1
+    if saldo >= 0:
+        contas_positivas += 1
+        print(f"A conta {n_conta} tem saldo {saldo}")
+        print("Positivo")
+    if saldo < 0:
+        contas_negativas += 1
+        print(f"A conta {n_conta} tem saldo {saldo}")
+        print("Negativo")
+    
+if total_contas > 0:
+    percentual_neg = (contas_negativas / total_contas)*100
+    print(f"O percentual de contas negativas é: {percentual_neg:.2f}%")
+
+#Questão 18
+num = []
+multiplos = []
+while True:
+    valor = int(input("Digite um valor: "))
+    if valor == 0:
+        break
+    if valor != 0:
+        num.append(valor)
+for posicao, i in enumerate(num, start =1):
+    if i % posicao == 0:
+        multiplos.append(i)
+print(multiplos)
+
+#Questão 19
+while True:
+    num, num1 = int(input("Digite um número:")), int(input("Digite um número para  subtrair do anterior: "))
+    if num1 == 0:
+        break
+    while num >= num1:
+        num = num - num1
+    print(num)
+    break
+
+#Questão 20
+while True:
+    contador_mmc = 1
+    num, num1 = int(input("Digite o primeiro número: ")), int(input("Digite o segundo número: "))
+
+    i = 2
+    while  num > 1 or num1 > 1:
+        if num % i == 0 or num1 % i == 0:
+            contador_mmc*= i
+        if num % i == 0:
+            num = num / i
+        if num1 % i == 0:
+            num1 = num1 / i
+        if num % i != 0 and num1 % i != 0:
+            i += 1
+        if num == 1 and num1 == 1:
+            break
+    print(contador_mmc)
+"""
+#Questão 21
