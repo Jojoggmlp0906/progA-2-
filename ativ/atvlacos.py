@@ -275,5 +275,121 @@ while True:
         if num == 1 and num1 == 1:
             break
     print(contador_mmc)
-"""
+
 #Questão 21
+while True:
+    num, num1 = int(input("Digite o primeiro número: ")), int(input("Digite o segundo número: "))
+    num = abs(num)
+    num1 = abs(num1)
+    n_original = num
+    n1_original = num1
+    i = 2
+    contador_mdc = 1
+    while num > 1 and num1 > 1:
+        if num % i == 0 and num1 % i == 0:
+            contador_mdc *= i
+            num = num//i
+            num1 = num1//i
+        if num % i != 0 or num1 % i != 0:
+            i+=1
+        if num == 1 and num1 == 1:
+            break
+        if i > min(num, num1):
+            break
+    print(f"O mdc de {n_original} e {n1_original} é: {contador_mdc}")
+    break
+#Questão 22
+while True:
+    num = str(input("Digite um número entre 1000 e 9999: "))
+    if len(num) < 4 or len(num) > 4:
+        break
+    numn = int(num)
+    dois_primeiros = int(num[0:2])
+    dois_ultimos = int(num[2:4])
+    juncao = (dois_primeiros + dois_ultimos)
+    juncao_2 = juncao ** 2
+    if juncao_2 == numn and numn//100 == dois_primeiros and numn % 100 == dois_ultimos:
+        print(f"{numn} possui a mesma característica que 3025")
+    else: 
+        print(f"{numn} não possui a mesma característica que 3025")
+#23 Questão
+total = 0
+while True:
+    cod_prod = int(input("Digite o código do produto: "))
+    if cod_prod == 0:
+        break
+    preco_uni = float(input("Digite o valor unitário: "))
+    quant = int(input("Digite a quantidade: "))
+    total += preco_uni*quant
+print(f"O valor total da compra: {total}")
+#24 Questão
+def calcularmedia(a, b):
+    media = a/b
+    return media
+contagem = 0
+total = 0
+numeros = []
+num = int(input("Digite um número: "))
+while num != 0:
+    numeros.append(num)
+    num = int(input("Digite um número: "))
+for i in numeros:
+    total += i
+    contagem += 1
+
+print(f"Maior: {max(numeros)}   Menor:{min(numeros)}    Média: {calcularmedia(total, contagem)}")
+#Questão 25
+lista = []
+entre_100_1000 = []
+num = 0
+
+while True:
+    num = int(input("Digite um número: "))
+    if num != -1:
+        lista.append(num)
+    else:
+        break
+for x in lista:
+    if x > 100 and x < 1000:
+      entre_100_1000.append(x)
+if len(entre_100_1000) > 0:
+    print(f" O menor valor entre 100 e 1000 é: {min(entre_100_1000)}")
+    print(f"A média dos valores entre 100 e 1000 é: {(sum(entre_100_1000)/len(entre_100_1000)):.2f}")
+    print(f"A soma de todos os valores entre 100 e 1000 é: {sum(entre_100_1000)}")
+print(f"A soma de todos os valores é: {sum(lista)}") 
+#Questão 26
+lista = []
+multiplosde8 = []
+
+while True:
+    num = int(input("Digite um número: "))
+    if num == -1:
+        break
+    lista.append(num)
+    print(lista)
+for n in lista:
+    if n % 8 == 0:
+        multiplosde8.append(n)
+print(len(multiplosde8))
+if len(lista) > 0:
+    print(f"{sum(lista)/len(lista):.2f}")
+#Questão27:
+
+primos = []
+while True:
+    num = int(input("Verifique se um número é primo: "))
+    if num <= 0 :
+        break
+    resultado = True
+    if num == 1:
+        resultado = False
+    for i in range(2, num):
+        if num % i == 0:
+            resultado = False
+            break
+    if resultado == True:
+        primos.append(num)
+        print(primos)
+    
+"""
+#Questão 28
