@@ -1,44 +1,57 @@
+clientes = []
+contas = []
+saldos = []
 def cadastrarcliente(nome):
-    cliente = nome
-    return cliente
+    clientes.append(nome)
 def consultar_saldo(saldo):
-    return saldo
+    print(saldo)
 def fazerdeposito(saldo, deposito):
     total_deposito = saldo + deposito
     return total_deposito
 def fazersaque(saldo, saque):
     total_saque = saldo - saque
     return total_saque
-clientes = []
-contas = []
-saldos = []
 while True:
-    nome = input("Digite o nome do cliente")
-    clientes.append(nome)
-    print(f'o cadastro do cliente {cadastrarcliente(nome)} foi realizado')
-    conta = int(input("Crie uma conta"))
+    conta = int(input("Crie uma conta (para finalizar digite -1): "))
+    if conta == -1:
+        print("Fim")
+        break
+    while conta in contas:
+        conta = int(input("Digite outra conta, pois a digitada anteriormente já existe: "))
     contas.append(conta)
-    saldo = 0.0
+    nome = input("Digite o nome do cliente: ")
+    cadastrarcliente(nome)
+    print(f'o cadastro do cliente {nome} foi realizado')
+    saldo = 0
     saldos.append(saldo)
-    opcao = input("Digite o número correspondente a opção\n 0 - Para consultar saldo\n 1 - Para fazer um depósito\n 2- Para fazer um saque\n 3- Para procurar uma conta pelo número \n4- Para listar contas ")
-    if opcao == "0":
-        print(consultar_saldo(saldo))
-    if opcao == "1":
-        valor_deposito = float(input("Digite o valor do depósito: "))
-        novo_valor = fazerdeposito(saldo, valor_deposito)
-        saldo = novo_valor
-        break
-    if opcao == "2":
-        valor_saque = float(input("Digite o valor do saque"))
-        novo_valor = fazersaque(saldo, valor_saque)
-        saldo = novo_valor
-        break
-    if opcao == "3":
-        procurar = int(input("Digite a conta que você quer procurar: "))
-        juncao = list(zip(contas, clientes, saldos))
-        for tupla in juncao:
-            if procurar in tupla:
-                print(f"conta: {tupla}")
-        break
-    if opcao == "4":
-        print(contas)
+    while True:
+        opcao = input("Digite o número correspondente a opção\n0- Para consultar saldo\n1- Para fazer um depósito\n2- Para fazer um saque \n3- Para listar as contas cadastradas\n4- Para procurar uma conta \nDigite -1 para adicionar uma nova conta\n")
+        if opcao == "-1":
+            break
+        if opcao == "0":
+            print(consultar_saldo(saldo))
+        if opcao == "1":
+            valor_deposito = float(input("Digite o valor do depósito: "))
+            novo_valor = fazerdeposito(saldo, valor_deposito)
+            saldo = novo_valor
+            print(f"Você depositou: {valor_deposito} e seu novo saldo é: {saldo}")
+            saldos[-1] = saldo
+        if opcao == "2" and saldo > 0:
+            valor_saque = float(input("Digite o valor do saque: "))
+            if valor_saque > saldo:
+                print("Seu saldo é menor do que o valor de saque")
+            else:
+                novo_valor = fazersaque(saldo, valor_saque)
+                saldo = novo_valor
+                saldos[-1] = saldo
+                print(f"Você sacou {valor_saque} e seu novo saldo é: {saldo}")
+        if opcao == "2" and saldo == 0:
+            print("Você está sem saldo e por isso não pode sacar!")
+        if opcao == "3" and len(contas) > 0:
+            print(f" Essas são as contas cadastradas: \n{contas}")
+        if opcao == "4" and len(contas) > 0:
+            proc_cont = int(input("Digite a conta que você quer procurar: "))
+            posicao = contas.index(proc_cont)
+            procurar_conta = list(zip(contas, clientes, saldos))
+            print()
+            print(f"conta | cliente |  saldo  \n{procurar_conta[posicao]}")
