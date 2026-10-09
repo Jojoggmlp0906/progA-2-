@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Banco Simples</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h3>Busque a conta que deseja</h3>
+    <form action="/buscar" method="POST">
+        <input type="hidden" name="conta" value="{{ conta_html }}">
+        <label for="buscador"> Digite a conta: </label>
+        <input type="number" name="buscador" placeholder="Ex: 0303">
+        <button type="submit">Procurar</button>
+    </form>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+            {% for category, message in messages %}
+                <!-- A categoria (ex: 'success', 'danger') pode virar uma classe CSS -->
+                    <li class="alert alert-{{ category }}">
+                        {{ message }}
+                    </li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+    <a href="/"><button type="button">Página Inicial</button></a>
+</body>
+</html>
