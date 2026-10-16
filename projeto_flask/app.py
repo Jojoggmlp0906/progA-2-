@@ -2,13 +2,25 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 app = Flask(__name__)
 app.secret_key = "090807"
 clientes = {} #atualizei para dicionário, já que precisaríamos de muitas funções pra operar com listas
-
-def fazerdeposito(saldo, deposito):
-    total_deposito = saldo + deposito #realiza a conta para depositar e agrega ao valor já existente
-    return total_deposito
-def fazersaque(saldo, saque):
-    total_saque = saldo - saque #realiza o saque da conta, subtraindo do valor existente
-    return total_saque
+class cliente:
+    global clientes
+    def __init__(self, conta, nome, saldo):
+        self.conta = conta
+        self.nome = nome
+        self.saldo = saldo
+        clientes[self.conta]={self}
+    def fazerdeposito(self, deposito):
+        self.saldo += deposito #realiza a conta para depositar e agrega ao valor já existente
+    def fazersaque(self, saque):
+        self.saldo -= saque #realiza o saque da conta, subtraindo do valor existente
+    def buscarconta(self):
+        return {
+            "conta" : self.conta,
+            "nome" : self.nome,
+            "saldo": self.saldo  
+        }
+    
+    
 
 #funções para operações matemáticas
 
