@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Banco Simples</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Área de depósito</h1>
+    <br>
+    <h2>Olá {{ nome_html }}</h2>
+    <br>
+    <h3>Saldo Atual: R$ {{ saldo_atual }}</h3>
+    <form action="/depositar" method="POST">
+        <input type="hidden" name="conta" value="{{ conta_html }}">
+        <label>Digite o valor para depositar:</label>
+        <input typr="number" name="valor_deposito">
+        <button type="submit">Confirmar Saque</button>
+    </form>
+</body>
+</html>
