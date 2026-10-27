@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <title><b>Banco de Dados</b></title>
+    </head>
+    <body>
+        <h1>Nosso Banco de Dados</h1>
+        <ul>
+            {% for numero_conta, dados in banco_dados.items() %}
+                <li>
+                    <strong>Conta:</strong>{{ numero_conta }} |
+                    <strong>Nome:</strong>{{ dados._nome }} |
+                    <strong>Saldo:</strong>{{ dados._saldo }} |
+                </li>
+                {% else %}
+                    <li>Nenhuma Conta cadastrada ainda.</li>
+            {% endfor %}
+        </ul>
+        <a href="/"><button type="button">Voltar ao inicio</button></a>
+    </body>
+</html>
