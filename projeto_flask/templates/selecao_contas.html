@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Seleção de Contas - Banco Simples</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Olá, {{ nome_html }}!</h1>
+        <h3>Selecione a conta que deseja acessar</h3>
+
+        <form action="/selecao" method="POST">
+            <div style="text-align: left; margin: 15px 0;">
+                {% for conta in contas_html %}
+                    <div style="margin-bottom: 10px;">
+                        <input type="radio" id="conta_{{ conta.numero }}" name="contaselecionada" value="{{ conta.numero }}" required>
+                        <label for="conta_{{ conta.numero }}">
+                            <strong>Conta Nº {{ conta.numero }}</strong> ({{ conta.tipo }}) — Saldo: R$ {{ "%.2f" | format(conta.saldo) }}
+                        </label>
+                    </div>
+                {% else %}
+                    <p>Você ainda não possui contas cadastradas.</p>
+                {% endfor %}
+            </div>
+
+            {% if contas_html %}
+                <button type="submit">Acessar Conta</button>
+            {% endif %}
+        </form>
+
+        <hr style="margin: 20px 0;">
+
+        <!-- Botão opcional caso o cliente já existente queira abrir uma nova conta -->
+        <form action="/ir-para-criar-conta" method="POST">
+            <button type="submit" class="btn-secundario">Criar Nova Conta</button>
+        </form>
+    </div>
+</body>
+</html>

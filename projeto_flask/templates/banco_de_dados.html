@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-    <head>
-        <meta charset="UTF-8">
-        <title>Banco de Dados</title>
-    </head>
-    <body>
-        <h1>Nosso Banco de Dados</h1>
-        <ul>
-            {% for numero_conta, dados in banco_dados.items() %}
-                <li>
-                    <strong>Conta:</strong> {{ numero_conta }} |
-                    <!-- Puxa o nome direto do dicionário -->
-                    <strong>Nome:</strong> {{ dados.nome }} |
-                    <!-- Entra no objeto Conta e puxa a property saldo -->
-                    <strong>Saldo:</strong> R$ {{ "%.2f"|format(dados.informacoes_conta.saldo) }}
-                </li>
-            {% else %}
-                <li>Nenhuma conta cadastrada ainda.</li>
-            {% endfor %}
-        </ul>
-        
-        <!-- Pequeno ajuste: para o botão voltar usando GET no Flask, o link simples funciona melhor -->
-        <a href="/"><button type="button">Voltar ao início</button></a>
-    </body>
+<head>
+    <meta charset="UTF-8">
+    <title>Banco de Dados</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Nosso Banco de Dados</h1>
+    <ul>
+        {% for numero_conta, conta in contas.items() %}
+            <li>
+                <strong>Conta:</strong> {{ numero_conta }} | 
+                <strong>Tipo:</strong> {{ conta.tipo }} | 
+                <strong>Titular:</strong> {{ conta.titular.nome }} | 
+                <strong>CPF:</strong> {{ conta.titular.cpf }} | 
+                <strong>Saldo:</strong> R$ {{ "%.2f" | format(conta.saldo) }}
+            </li>
+        {% else %}
+            <li>Nenhuma conta cadastrada ainda.</li>
+        {% endfor %}
+    </ul>
+
+    <a href="/"><button type="button">Voltar ao início</button></a>
+</body>
 </html>
