@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Banco Simples</title>
+    <!-- Link para o CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Meu Banco</h1>
+        <h3>Criação de Conta</h3>
+
+        <form action="/user" method="POST">
+            <label for="conta">Digite uma conta:</label>
+            <input type="number" id="conta" name="conta" placeholder="Ex: 0202" required>
+
+            <label for="nome">Digite seu nome:</label>
+            <input type="text" id="nome" name="nome" placeholder="Ex: Joadson Barbosa" required>
+
+            <button type="submit">Entrar / Cadastrar</button>
+        </form>
+    </div>
+</body>
+</html>
