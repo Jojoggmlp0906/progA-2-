@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Banco Simples</title>
+    <!-- Link para o CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
         <h2>Olá, {{ nome_html }}!</h2>
-        <h3>Seu saldo é: R$ {{ saldo_atual }}</h3>
-
+        <!-- ADICIONADO O TIPO DA CONTA E FORMATAÇÃO DO SALDO -->
+        <h3>Conta {{ tipo_html }} (Nº {{ conta_html }})</h3>
+        <h3>Seu saldo é: R$ {{ "%.2f" | format(saldo_atual) }}</h3>
+        
         <!-- Opção Depositar -->
         <form action="/ir-para-deposito" method="POST">
             <input type="hidden" name="conta" value="{{ conta_html }}">
@@ -27,10 +30,12 @@
             <input type="hidden" name="conta" value="{{ conta_html }}">
             <button type="submit" class="btn-secundario">Procurar uma conta</button>
         </form>
+
+        <!-- Opção Mostrar Banco de Dados -->
         <form action="/ir-para-dados" method="POST">
-            <input type="hidden" name="dados" value="{{ banco_dados }}">
             <button type="submit" class="btn-dados">Mostrar Banco de Dados</button>
         </form>
+
         <a href="/" class="btn btn-secundario" style="margin-top: 10px;">Adicionar/Mudar de conta</a>
     </div>
 </body>
