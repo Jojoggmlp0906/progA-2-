@@ -9,7 +9,7 @@
     <div class="container">
         <h1>Meu Banco</h1>
         <h3>Criar Nova Conta</h3>
-
+        <h4>Agência: {{ agencia_html }}</h4>
         <!-- Exibe alertas caso falte algum dado -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
