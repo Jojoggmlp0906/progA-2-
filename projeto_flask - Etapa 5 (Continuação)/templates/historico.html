@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Extrato - Banco Simples</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Extrato da Conta</h1>
+        <h2>Titular: {{ nome_html }}</h2>
+        <h3>Conta Nº {{ conta_html }} | Saldo Atual: R$ {{ "%.2f" | format(saldo_atual) }}</h3>
+
+        <hr style="margin: 20px 0;">
+
+        <h4>Histórico de Transações:</h4>
+        <ul style="text-align: left; margin: 15px 0;">
+            {% for transacao in historico %}
+                <li>{{ transacao }}</li>
+            {% else %}
+                <li>Nenhuma transação registrada nesta conta ainda.</li>
+            {% endfor %}
+        </ul>
+
+        <!-- Botão para voltar ao menu de opções da conta (usando a rota segura que mantém o ID) -->
+        <form action="/voltar-opcoes" method="POST">
+            <input type="hidden" name="conta" value="{{ conta_html }}">
+            <button type="submit" class="btn-secundario">Voltar ao Menu</button>
+        </form>
+    </div>
+</body>
+</html>

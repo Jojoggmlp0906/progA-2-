@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Transferência - Banco Simples</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Área de Transferência</h1>
+        <h2>Olá, {{ nome_html }}</h2>
+        <h3>Saldo Atual: R$ {{ "%.2f" | format(saldo_atual) }}</h3>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="/transferir" method="POST">
+            <input type="hidden" name="conta_origem" value="{{ conta_html }}">
+            
+            <label for="conta_destino">Número da Conta de Destino:</label>
+            <input type="number" id="conta_destino" name="conta_destino" placeholder="Ex: 2030" required>
+
+            <label for="valor_transferencia">Valor da Transferência:</label>
+            <input type="number" step="0.01" id="valor_transferencia" name="valor_transferencia" placeholder="Ex: 100.00" required>
+            
+            <button type="submit">Confirmar Transferência</button>
+        </form>
+
+        <form action="/voltar-opcoes" method="POST" style="margin-top: 10px;">
+            <input type="hidden" name="conta" value="{{ conta_html }}">
+            <button type="submit" class="btn-secundario">Voltar ao Menu</button>
+        </form>
+    </div>
+</body>
+</html>
