@@ -6,21 +6,27 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Nosso Banco de Dados</h1>
-    <ul>
-        {% for numero_conta, conta in contas.items() %}
-            <li>
-                <strong>Conta:</strong> {{ numero_conta }} | 
-                <strong>Tipo:</strong> {{ conta.tipo }} | 
-                <strong>Titular:</strong> {{ conta.titular.nome }} | 
-                <strong>CPF:</strong> {{ conta.titular.cpf }} | 
-                <strong>Saldo:</strong> R$ {{ "%.2f" | format(conta.saldo) }}
-            </li>
-        {% else %}
-            <li>Nenhuma conta cadastrada ainda.</li>
-        {% endfor %}
-    </ul>
+    <div class="container">
+        <h1>Nosso Banco de Dados</h1>
+        <ul>
+            {% for numero_conta, conta in contas.items() %}
+                <li>
+                    <strong>Conta:</strong> {{ numero_conta }} | 
+                    <strong>Tipo:</strong> {{ conta.tipo }} | 
+                    <strong>Titular:</strong> {{ conta.titular.nome }} | 
+                    <strong>CPF:</strong> {{ conta.titular.cpf }} | 
+                    <strong>Saldo:</strong> R$ {{ "%.2f" | format(conta.saldo) }}
+                </li>
+            {% else %}
+                <li>Nenhuma conta cadastrada ainda.</li>
+            {% endfor %}
+        </ul>
 
-    <a href="/"><button type="button">Voltar ao início</button></a>
+        <!-- Formulário com o input oculto para mandar o número da conta de volta -->
+        <form action="/voltar-opcoes" method="POST" style="margin-top: 15px;">
+            <input type="hidden" name="conta" value="{{ conta_html }}">
+            <button type="submit" class="btn-secundario">Voltar ao Menu</button>
+        </form>
+    </div>
 </body>
 </html>

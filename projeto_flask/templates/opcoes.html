@@ -25,14 +25,27 @@
             <button type="submit" class="btn-saque">Sacar</button>
         </form>
 
+        <!-- Opção Transferir -->
+        <form action="/ir-para-transferencia" method="POST">
+            <input type="hidden" name="conta" value="{{ conta_html }}">
+            <button type="submit" class="btn-secundario">Transferir</button>
+        </form>
+
+        <!-- Opção Ver Extrato / Histórico -->
+        <form action="/ir-para-historico" method="POST">
+            <input type="hidden" name="conta" value="{{ conta_html }}">
+            <button type="submit" class="btn-secundario">Ver Extrato</button>
+        </form>
+
         <!-- Opção Procurar Conta -->
         <form action="/ir-procurar" method="POST">
             <input type="hidden" name="conta" value="{{ conta_html }}">
             <button type="submit" class="btn-secundario">Procurar uma conta</button>
         </form>
 
-        <!-- Opção Mostrar Banco de Dados -->
+        <!-- Opção Mostrar Banco de Dados (Corrigida com o input hidden) -->
         <form action="/ir-para-dados" method="POST">
+            <input type="hidden" name="conta" value="{{ conta_html }}">
             <button type="submit" class="btn-dados">Mostrar Banco de Dados</button>
         </form>
 
