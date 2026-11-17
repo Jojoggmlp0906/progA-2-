@@ -21,7 +21,7 @@
                 <li>Nenhuma transação registrada nesta conta ainda.</li>
             {% endfor %}
         </ul>
-
+        {{ grafico_evolucao_html | safe }}
         <!-- Botão para voltar ao menu de opções da conta (usando a rota segura que mantém o ID) -->
         <form action="/voltar-opcoes" method="POST">
             <input type="hidden" name="conta" value="{{ conta_html }}">
