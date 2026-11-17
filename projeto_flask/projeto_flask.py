@@ -3,6 +3,8 @@ from datetime import datetime
 from abc import ABC, abstractmethod
 import plotly.express as px
 import pandas as pd
+import json
+import os
 
 app = Flask(__name__)
 app.secret_key = "090807"
@@ -39,21 +41,29 @@ class Conta(ABC):
         self.titular = titular  # Objeto Cliente
         self._saldo = float(saldo)  # Protegido para acesso nas subclasses
         self.historico_transacoes = []
+        # Dados simulados iniciais + saldo atual para o gráfico de evolução
+        self.evolucao_anual = [
+            {"mes": "Set", "valor": 1000.0},
+            {"mes": "Out", "valor": 1150.0},
+            {"mes": "Nov", "valor": self._saldo}
+        ]
 
     @property
     def saldo(self):
         return self._saldo
 
-    def depositar(self, valor: float):
+    def depositar(self, valor: float, mes: str = "Nov"):
         if valor <= 0:
             return False, "O valor do depósito precisa ser maior que 0."
         self._saldo += valor
         self.historico_transacoes.append(
             f"Depósito de R$ {valor:.2f} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
         )
+        # Registra o novo saldo na evolução anual
+        self.evolucao_anual.append({"mes": mes, "valor": self._saldo})
         return True, "Depósito realizado com sucesso!"
 
-    def sacar(self, valor: float):
+    def sacar(self, valor: float, mes: str = "Nov"):
         if valor <= 0:
             return False, "O valor do saque precisa ser maior que 0."
         if valor > self._saldo:
@@ -62,6 +72,8 @@ class Conta(ABC):
         self.historico_transacoes.append(
             f"Saque de R$ {valor:.2f} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
         )
+        # Registra o novo saldo na evolução anual
+        self.evolucao_anual.append({"mes": mes, "valor": self._saldo})
         return True, "Saque realizado com sucesso!"
 
     def transferir(self, valor: float, conta_destino):
@@ -97,6 +109,7 @@ class ContaCorrente(Conta):
         self.historico_transacoes.append(
             f"Desconto de taxa de manutenção: R$ {self.taxa_manutencao:.2f} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
         )
+        self.evolucao_anual.append({"mes": "Nov", "valor": self._saldo})
         return True, "Taxa de manutenção descontada com sucesso!"
 
 
@@ -111,22 +124,29 @@ class ContaPoupanca(Conta):
         self.historico_transacoes.append(
             f"Rendimento aplicado: R$ {rendimento:.2f} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
         )
+        self.evolucao_anual.append({"mes": "Nov", "valor": self._saldo})
         return True, f"Rendimento de R$ {rendimento:.2f} aplicado com sucesso!"
 
 
 class Agencia:
-    def __init__(self, nome: str, numero: str):
+    def __init__(self, nome: str, numero: str, arquivo_json: str = "dados_banco.json"):
         self.nome = nome
         self.numero = numero
+        self.arquivo_json = arquivo_json
         self.lista_contas = {}    # {numero_conta: objeto_conta}
         self.lista_clientes = {}  # {cpf: objeto_cliente}
         self.correntes_criadas = 0
         self.poupancas_criadas = 0
+        
+        # Recupera os dados salvos assim que o servidor inicia
+        self.carregar_dados()
+
     def cadastrar_cliente(self, nome: str, cpf: str, salario: float, telefone: str):
         if cpf in self.lista_clientes:
             return self.lista_clientes[cpf]
         novo_cliente = Cliente(nome, cpf, salario, telefone)
         self.lista_clientes[cpf] = novo_cliente
+        self.salvar_dados()  # Persiste o novo cliente
         return novo_cliente
 
     def criar_conta(self, numero: int, tipo: str, cpf_titular: str, saldo_inicial: float = 0.0):
@@ -150,6 +170,7 @@ class Agencia:
 
         self.lista_contas[numero] = nova_conta
         cliente.adicionar_conta(nova_conta)
+        self.salvar_dados()  # Persiste a nova conta
         return True, "Conta criada com sucesso!"
 
     def buscar_conta(self, numero: int):
@@ -159,13 +180,92 @@ class Agencia:
         return sum(conta.saldo for conta in self.lista_contas.values())
 
     def GraficoPizza(self):
-        dados_grafico ={
+        dados_grafico = {
             "Tipos": ["Corrente", "Poupança"],
             "Quantidade": [self.correntes_criadas, self.poupancas_criadas]
         }
         df_tipos = pd.DataFrame(dados_grafico)
         fig_pizza = px.pie(df_tipos, values="Quantidade", names="Tipos", title="Distribuição de Contas - Agência 001")
-        return fig_pizza.to_html()
+        return fig_pizza.to_html(full_html=False, include_plotlyjs="cdn")
+
+    def GraficoEvolucao(self, numero_conta: int):
+        """Gera o gráfico de linha do crescimento do saldo ao longo do ano para uma conta."""
+        conta = self.buscar_conta(int(numero_conta))
+        if not conta:
+            return ""
+        df = pd.DataFrame(conta.evolucao_anual)
+        fig = px.line(
+            df,
+            x="mes",
+            y="valor",
+            markers=True,
+            title=f"Evolução do Saldo - Conta {conta.numero}"
+        )
+        return fig.to_html(full_html=False, include_plotlyjs="cdn")
+
+    def salvar_dados(self):
+        """Converte clientes e contas em dicionários simples e grava no arquivo JSON."""
+        estrutura = {
+            "correntes_criadas": self.correntes_criadas,
+            "poupancas_criadas": self.poupancas_criadas,
+            "clientes": {},
+            "contas": {}
+        }
+
+        for cpf, cliente in self.lista_clientes.items():
+            estrutura["clientes"][cpf] = {
+                "nome": cliente.nome,
+                "cpf": cliente.cpf,
+                "salario": cliente.salario,
+                "telefone": cliente.telefone
+            }
+
+        for num, conta in self.lista_contas.items():
+            estrutura["contas"][str(num)] = {
+                "numero": conta.numero,
+                "tipo": conta.tipo,
+                "cpf_titular": conta.titular.cpf,
+                "saldo": conta._saldo,
+                "historico_transacoes": conta.historico_transacoes,
+                "evolucao_anual": conta.evolucao_anual
+            }
+
+        with open(self.arquivo_json, "w", encoding="utf-8") as f:
+            json.dump(estrutura, f, indent=4, ensure_ascii=False)
+
+    def carregar_dados(self):
+        """Lê o arquivo JSON (se existir) e reconstrói os objetos na memória."""
+        if not os.path.exists(self.arquivo_json):
+            return
+
+        with open(self.arquivo_json, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+
+        self.correntes_criadas = dados.get("correntes_criadas", 0)
+        self.poupancas_criadas = dados.get("poupancas_criadas", 0)
+
+        # 1. Recria os clientes
+        for cpf, info in dados.get("clientes", {}).items():
+            self.lista_clientes[cpf] = Cliente(
+                info["nome"], info["cpf"], info["salario"], info["telefone"]
+            )
+
+        # 2. Recria as contas e reconecta aos respectivos titulares
+        for num_str, info in dados.get("contas", {}).items():
+            titular = self.lista_clientes.get(info["cpf_titular"])
+            if titular:
+                num = int(info["numero"])
+                if info["tipo"] == "Corrente":
+                    conta = ContaCorrente(num, titular, info["saldo"])
+                else:
+                    conta = ContaPoupanca(num, titular, info["saldo"])
+
+                conta.historico_transacoes = info.get("historico_transacoes", [])
+                conta.evolucao_anual = info.get("evolucao_anual", conta.evolucao_anual)
+
+                self.lista_contas[num] = conta
+                titular.adicionar_conta(conta)
+
 
 # Instância única da agência do banco
 agencia_central = Agencia("Agência Central", "001")
@@ -194,7 +294,7 @@ def fazerlogin():
             cpf_html=cpf,
             nome_html=cliente.mostrar_nome,
             contas_html=cliente.contas,
-            agencia_html = agencia
+            agencia_html=agencia
         )
     else:
         session["cpf_pendente"] = cpf
@@ -230,7 +330,7 @@ def fazercadastro():
 
 @app.route("/ir-para-criar-conta", methods=["GET", "POST"])
 def ircriarconta():
-    return render_template("criacao_conta.html", agencia_html= session.get("agencia"))
+    return render_template("criacao_conta.html", agencia_html=session.get("agencia"))
 
 
 @app.route("/criandoconta", methods=["POST"])
@@ -373,6 +473,7 @@ def sacar():
     if not sucesso:
         flash(mensagem, "danger")
     else:
+        agencia_central.salvar_dados()  # Atualiza o JSON após o saque
         flash(mensagem, "success")
 
     return render_template(
@@ -409,6 +510,7 @@ def depositar():
     if not sucesso:
         flash(mensagem, "danger")
     else:
+        agencia_central.salvar_dados()  # Atualiza o JSON após o depósito
         flash(mensagem, "success")
 
     return render_template(
@@ -429,12 +531,14 @@ def ir_para_historico():
     objeto_conta = agencia_central.buscar_conta(conta)
     
     dados_historico = objeto_conta.exibir_historico_saldo()
+    grafico_evolucao = agencia_central.GraficoEvolucao(conta)
     return render_template(
         'historico.html',
         conta_html=conta,
         nome_html=objeto_conta.titular.nome,
         saldo_atual=dados_historico["saldo"],
-        historico=dados_historico["historico"]
+        historico=dados_historico["historico"],
+        grafico_evolucao_html=grafico_evolucao  # Já disponível para usar no historico.html
     )
 
 
@@ -502,6 +606,7 @@ def transferir():
     if not sucesso:
         flash(mensagem, "danger")
     else:
+        agencia_central.salvar_dados()  # Atualiza o JSON após a transferência
         flash(mensagem, "success")
 
     return render_template(
@@ -512,10 +617,13 @@ def transferir():
         saldo_atual=conta_origem.saldo
     )
 
+
 @app.route("/ir-painel", methods=["POST"])
 def irpainel():
     grafico = agencia_central.GraficoPizza()
     return render_template("painel_contas.html", grafico_html=grafico)
+
+
 @app.route("/voltar-opcoes", methods=['POST'])
 def voltar_opcoes():
     conta = request.form.get("conta")
