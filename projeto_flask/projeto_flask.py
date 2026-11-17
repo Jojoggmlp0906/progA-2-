@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from datetime import datetime
 from abc import ABC, abstractmethod
+import plotly.express as px
+import pandas as pd
 
 app = Flask(__name__)
 app.secret_key = "090807"
@@ -156,10 +158,17 @@ class Agencia:
     def calcular_patrimonio_total(self):
         return sum(conta.saldo for conta in self.lista_contas.values())
 
+    def GraficoPizza(self):
+        dados_grafico ={
+            "Tipos": ["Corrente", "Poupança"],
+            "Quantidade": [self.correntes_criadas, self.poupancas_criadas]
+        }
+        df_tipos = pd.DataFrame(dados_grafico)
+        fig_pizza = px.pie(df_tipos, values="Quantidade", names="Tipos", title="Distribuição de Contas - Agência 001")
+        return fig_pizza.to_html()
 
 # Instância única da agência do banco
 agencia_central = Agencia("Agência Central", "001")
-
 
 # --- ROTAS DO FLASK ---
 
@@ -503,7 +512,10 @@ def transferir():
         saldo_atual=conta_origem.saldo
     )
 
-
+@app.route("/ir-painel", methods=["POST"])
+def irpainel():
+    grafico = agencia_central.GraficoPizza()
+    return render_template("painel_contas.html", grafico_html=grafico)
 @app.route("/voltar-opcoes", methods=['POST'])
 def voltar_opcoes():
     conta = request.form.get("conta")
