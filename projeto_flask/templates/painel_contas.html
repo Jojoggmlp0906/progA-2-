@@ -8,7 +8,8 @@
     <body>
         <h1>Painel de Controle de Contas</h1>
         <div class="container">
-            {{ grafico_html | safe }}
+            {{ grafico_pizza_html | safe }}
+            {{ grafico_barras_html | safe}}
             <form action="/voltar-opcoes" method="POST" style="margin-top: 15px;">
             <input type="hidden" name="conta" value="{{ conta_html }}">
             <button type="submit" class="btn-secundario">Voltar ao Menu</button>

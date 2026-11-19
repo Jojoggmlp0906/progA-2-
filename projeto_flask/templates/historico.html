@@ -22,6 +22,10 @@
             {% endfor %}
         </ul>
         {{ grafico_evolucao_html | safe }}
+        <hr style="margin: 20px 0;">
+        {{ grafico_barras_html | safe }}
+        <hr style="margin: 20px 0;">
+        {{ grafico_pizza_html | safe }}
         <!-- Botão para voltar ao menu de opções da conta (usando a rota segura que mantém o ID) -->
         <form action="/voltar-opcoes" method="POST">
             <input type="hidden" name="conta" value="{{ conta_html }}">

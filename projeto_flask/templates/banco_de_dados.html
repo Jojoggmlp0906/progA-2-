@@ -21,7 +21,36 @@
                 <li>Nenhuma conta cadastrada ainda.</li>
             {% endfor %}
         </ul>
+        <!-- Alertas de sucesso ou erro na importação -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
+        <hr style="margin: 20px 0;">
+
+        <h3>Exportar Dados</h3>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+            <form action="/exportar-dados" method="POST">
+                <input type="hidden" name="formato" value="json">
+                <button type="submit" class="btn-dados">Exportar JSON</button>
+            </form>
+
+            <form action="/exportar-dados" method="POST">
+                <input type="hidden" name="formato" value="csv">
+                <button type="submit" class="btn-dados">Exportar CSV</button>
+            </form>
+        </div>
+
+        <h3>Importar Dados (JSON ou CSV)</h3>
+        <form action="/importar-dados" method="POST" enctype="multipart/form-data" style="margin-bottom: 20px;">
+            <input type="hidden" name="conta" value="{{ conta_html }}">
+            <input type="file" name="arquivo_dados" accept=".json,.csv" required>
+            <button type="submit" class="btn-deposito" style="margin-top: 10px;">Importar Arquivo</button>
+        </form>
         <!-- Formulário com o input oculto para mandar o número da conta de volta -->
         <form action="/voltar-opcoes" method="POST" style="margin-top: 15px;">
             <input type="hidden" name="conta" value="{{ conta_html }}">
