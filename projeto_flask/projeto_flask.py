@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, Response
 from datetime import datetime
 from abc import ABC, abstractmethod
 import plotly.express as px
 import pandas as pd
 import json
 import os
+import io
 
 app = Flask(__name__)
 app.secret_key = "090807"
@@ -40,9 +41,10 @@ class Conta(ABC):
         self.tipo = tipo  # "Corrente" ou "Poupança"
         self.titular = titular  # Objeto Cliente
         self._saldo = float(saldo)  # Protegido para acesso nas subclasses
-        self.historico_transacoes = []
+        self.transacoes: list[Transacao] = []
+        self.historico_transacoes: list[str] = []
         # Dados simulados iniciais + saldo atual para o gráfico de evolução
-        self.evolucao_anual = [
+        self.evolucao_mensal = [
             {"mes": "Set", "valor": 1000.0},
             {"mes": "Out", "valor": 1150.0},
             {"mes": "Nov", "valor": self._saldo}
@@ -52,50 +54,123 @@ class Conta(ABC):
     def saldo(self):
         return self._saldo
 
-    def depositar(self, valor: float, mes: str = "Nov"):
+    def registrar_transacao(self, tipo: str, valor: float, mes: str = "Nov", descricao: str = "") -> Transacao:
+        transacao = Transacao(tipo=tipo, valor=valor, descricao=descricao)
+        self.transacoes.append(transacao)
+        self.historico_transacoes.append(transacao.formatar_texto())
+        self.evolucao_mensal.append({"mes": mes, "valor": self._saldo})
+        return transacao
+
+    def depositar(self, valor: float, mes: str = "Nov", tipo: str = "DEPOSITO", descricao: str = ""):
         if valor <= 0:
             return False, "O valor do depósito precisa ser maior que 0."
         self._saldo += valor
-        self.historico_transacoes.append(
-            f"Depósito de R$ {valor:.2f} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-        )
-        # Registra o novo saldo na evolução anual
-        self.evolucao_anual.append({"mes": mes, "valor": self._saldo})
+        self.registrar_transacao(tipo=tipo, valor=valor, mes=mes, descricao=descricao)
         return True, "Depósito realizado com sucesso!"
 
-    def sacar(self, valor: float, mes: str = "Nov"):
+    def sacar(self, valor: float, mes: str = "Nov", tipo: str = "SAQUE", descricao: str = ""):
         if valor <= 0:
             return False, "O valor do saque precisa ser maior que 0."
         if valor > self._saldo:
             return False, "Saldo insuficiente para realizar o saque."
         self._saldo -= valor
-        self.historico_transacoes.append(
-            f"Saque de R$ {valor:.2f} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-        )
-        # Registra o novo saldo na evolução anual
-        self.evolucao_anual.append({"mes": mes, "valor": self._saldo})
+        self.registrar_transacao(tipo=tipo, valor=valor, mes=mes, descricao=descricao)
         return True, "Saque realizado com sucesso!"
 
-    def transferir(self, valor: float, conta_destino):
-        sucesso, mensagem = self.sacar(valor)
+    def transferir(self, valor: float, conta_destino, mes: str = "Nov"):
+        if self.numero == conta_destino.numero:
+            return False, "Falha na transferência: não é possível transferir para a mesma conta."
+
+        sucesso, mensagem = self.sacar(
+            valor,
+            mes=mes,
+            tipo="TRANSFERENCIA",
+            descricao=f"enviada para conta {conta_destino.numero}",
+        )
         if not sucesso:
             return False, f"Falha na transferência: {mensagem}"
 
-        conta_destino.depositar(valor)
-        self.historico_transacoes[-1] = (
-            f"Transferência enviada: R$ {valor:.2f} para conta {conta_destino.numero} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+        sucesso_dest, msg_dest = conta_destino.depositar(
+            valor,
+            mes=mes,
+            tipo="TRANSFERENCIA",
+            descricao=f"recebida da conta {self.numero}",
         )
-        conta_destino.historico_transacoes[-1] = (
-            f"Transferência recebida: R$ {valor:.2f} da conta {self.numero} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-        )
+        if not sucesso_dest:
+            # Estorna o saldo e desfaz os registros da origem se o depósito falhar
+            self._saldo += valor
+            self.transacoes.pop()
+            self.historico_transacoes.pop()
+            self.evolucao_mensal.pop()
+            return False, f"Falha na transferência: {msg_dest}"
+
         return True, "Transferência realizada com sucesso!"
 
     def exibir_historico_saldo(self):
         return {
             "saldo": self._saldo,
-            "historico": self.historico_transacoes
+            "historico": self.historico_transacoes,
+            "transacoes": [t.to_dict() for t in self.transacoes]
+        }
+class Transacao:
+    """Representa uma transação financeira associada a uma conta."""
+    TIPOS_VALIDOS = {"SAQUE", "DEPOSITO", "TRANSFERENCIA", "PIX", "TAXA", "RENDIMENTO"}
+
+    def __init__(self, tipo: str, valor: float, data: datetime | None = None, descricao: str = ""):
+        tipo_normalizado = tipo.strip().upper()
+        if tipo_normalizado not in self.TIPOS_VALIDOS:
+            raise ValueError(f"Tipo inválido: {tipo}. Use um dos tipos válidos: {self.TIPOS_VALIDOS}")
+        if float(valor) <= 0:
+            raise ValueError("O valor digitado precisa ser maior que zero.")
+
+        self.tipo = tipo_normalizado
+        self.valor = float(valor)
+        self.data = data if data is not None else datetime.now()
+        self.descricao = descricao
+
+    def formatar_texto(self) -> str:
+        data_fmt = self.data.strftime("%d/%m/%Y %H:%M")
+        extra = f" ({self.descricao})" if self.descricao else ""
+        return f"{self.tipo.capitalize()}: R$ {self.valor:.2f}{extra} em {data_fmt}"
+
+    def to_dict(self) -> dict:
+        return {
+            "tipo": self.tipo,
+            "valor": self.valor,
+            "data": self.data.isoformat(),
+            "descricao": self.descricao,
         }
 
+    @classmethod
+    def from_dict(cls, dados: dict) -> "Transacao":
+        data_raw = dados.get("data")
+        if isinstance(data_raw, datetime):
+            data_obj = data_raw
+        elif isinstance(data_raw, str) and data_raw:
+            try:
+                data_obj = datetime.fromisoformat(data_raw)
+            except ValueError:
+                data_obj = datetime.strptime(data_raw, "%d/%m/%Y %H:%M")
+        else:
+            data_obj = datetime.now()
+
+        return cls(
+            tipo=dados["tipo"],
+            valor=float(dados["valor"]),
+            data=data_obj,
+            descricao=dados.get("descricao", ""),
+        )
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), ensure_ascii=False)
+
+    def __repr__(self) -> str:
+        return (
+            f"Transacao(tipo={self.tipo!r}, valor={self.valor:.2f}, "
+            f"data={self.data.strftime('%Y-%m-%d %H:%M:%S')!r})"
+        )
+        
+            
 
 class ContaCorrente(Conta):
     def __init__(self, numero: int, titular: Cliente, saldo: float = 0.0, taxa_manutencao: float = 15.0):
@@ -109,7 +184,7 @@ class ContaCorrente(Conta):
         self.historico_transacoes.append(
             f"Desconto de taxa de manutenção: R$ {self.taxa_manutencao:.2f} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
         )
-        self.evolucao_anual.append({"mes": "Nov", "valor": self._saldo})
+        self.evolucao_mensal.append({"mes": "Nov", "valor": self._saldo})
         return True, "Taxa de manutenção descontada com sucesso!"
 
 
@@ -124,7 +199,7 @@ class ContaPoupanca(Conta):
         self.historico_transacoes.append(
             f"Rendimento aplicado: R$ {rendimento:.2f} em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
         )
-        self.evolucao_anual.append({"mes": "Nov", "valor": self._saldo})
+        self.evolucao_mensal.append({"mes": "Nov", "valor": self._saldo})
         return True, f"Rendimento de R$ {rendimento:.2f} aplicado com sucesso!"
 
 
@@ -186,20 +261,34 @@ class Agencia:
         }
         df_tipos = pd.DataFrame(dados_grafico)
         fig_pizza = px.pie(df_tipos, values="Quantidade", names="Tipos", title="Distribuição de Contas - Agência 001")
-        return fig_pizza.to_html(full_html=False, include_plotlyjs="cdn")
+        return fig_pizza.to_html()
 
-    def GraficoEvolucao(self, numero_conta: int):
-        """Gera o gráfico de linha do crescimento do saldo ao longo do ano para uma conta."""
-        conta = self.buscar_conta(int(numero_conta))
-        if not conta:
+    
+    def GraficoMediaSalarial(self): #Gera o gráfico de média salarial a partir dos salarios dos usuários
+        """Gera um gráfico de barras com a média salarial dos titulares por tipo de conta."""
+        if not self.lista_contas:
             return ""
-        df = pd.DataFrame(conta.evolucao_anual)
-        fig = px.line(
-            df,
-            x="mes",
-            y="valor",
-            markers=True,
-            title=f"Evolução do Saldo - Conta {conta.numero}"
+
+        registros = [
+            {
+                "Tipo de Conta": conta.tipo,
+                "Conta": str(conta.numero),
+                "Titular": conta.titular.nome,
+                "Salario": float(conta.titular.salario),
+            }
+            for conta in self.lista_contas.values()
+        ]
+
+        df = pd.DataFrame(registros)
+        df_media = df.groupby("Tipo de Conta", as_index=False)["Salario"].mean()
+
+        fig = px.bar(
+            df_media,
+            x="Tipo de Conta",
+            y="Salario",
+            text_auto=".2f",
+            labels={"Tipo de Conta": "Tipo de Conta", "Salario": "Média Salarial (R$)"},
+            title="Média Salarial por Tipo de Conta",
         )
         return fig.to_html(full_html=False, include_plotlyjs="cdn")
 
@@ -221,13 +310,15 @@ class Agencia:
             }
 
         for num, conta in self.lista_contas.items():
+            # Em salvar_dados(), dentro do loop `for num, conta in self.lista_contas.items():`
             estrutura["contas"][str(num)] = {
                 "numero": conta.numero,
                 "tipo": conta.tipo,
                 "cpf_titular": conta.titular.cpf,
                 "saldo": conta._saldo,
                 "historico_transacoes": conta.historico_transacoes,
-                "evolucao_anual": conta.evolucao_anual
+                "transacoes": [t.to_dict() for t in conta.transacoes],
+                "evolucao_mensal": conta.evolucao_mensal
             }
 
         with open(self.arquivo_json, "w", encoding="utf-8") as f:
@@ -260,12 +351,223 @@ class Agencia:
                 else:
                     conta = ContaPoupanca(num, titular, info["saldo"])
 
-                conta.historico_transacoes = info.get("historico_transacoes", [])
-                conta.evolucao_anual = info.get("evolucao_anual", conta.evolucao_anual)
+                conta.transacoes = [
+                    Transacao.from_dict(item) for item in info.get("transacoes", [])
+                ]
+                conta.historico_transacoes = info.get(
+                    "historico_transacoes",
+                    [t.formatar_texto() for t in conta.transacoes]
+                )
+                conta.evolucao_mensal = info.get("evolucao_mensal", conta.evolucao_mensal)
 
                 self.lista_contas[num] = conta
                 titular.adicionar_conta(conta)
+    def GraficoPatrimonioCliente(self, cpf_cliente: str) -> str:
+        """1. Gráfico de Pizza: Distribuição do patrimônio entre as contas de um cliente."""
+        cliente = self.lista_clientes.get(cpf_cliente)
+        if not cliente or not cliente.contas:
+            return "<p>Nenhuma conta encontrada para este cliente.</p>"
 
+        dados = [
+            {
+                "Conta": f"Conta {c.numero} ({c.tipo})",
+                "Saldo": max(0.0, float(c.saldo))
+            }
+            for c in cliente.contas
+        ]
+        df = pd.DataFrame(dados)
+
+        if df["Saldo"].sum() == 0:
+            return "<p>O cliente ainda não possui saldo positivo distribuído nas contas.</p>"
+
+        fig = px.pie(
+            df,
+            values="Saldo",
+            names="Conta",
+            title=f"Distribuição de Patrimônio - {cliente.nome}",
+            hole=0.35
+        )
+        return fig.to_html(full_html=False, include_plotlyjs="cdn")
+
+    def GraficoSaquesDepositosMensais(self, numero_conta: int) -> str:
+        """2. Gráfico de Barras: Comparação de saques e depósitos ao longo dos meses."""
+        conta = self.buscar_conta(int(numero_conta))
+        if not conta or not conta.transacoes:
+            return "<p>Sem transações registradas para comparar saques e depósitos.</p>"
+
+        meses_pt = {
+            1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
+            7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"
+        }
+
+        registros = []
+        for t in conta.transacoes:
+            if t.tipo in {"SAQUE", "DEPOSITO"}:
+                rotulo_mes = f"{meses_pt[t.data.month]}/{t.data.year}"
+                registros.append({
+                    "Mes": rotulo_mes,
+                    "DataOrdenacao": t.data.strftime("%Y-%m"),
+                    "Operacao": "Depósitos" if t.tipo == "DEPOSITO" else "Saques",
+                    "Valor": float(t.valor)
+                })
+
+        if not registros:
+            return "<p>Nenhum saque ou depósito registrado ainda nesta conta.</p>"
+
+        df = pd.DataFrame(registros)
+        df_agrupado = (
+            df.groupby(["DataOrdenacao", "Mes", "Operacao"], as_index=False)["Valor"]
+            .sum()
+            .sort_values("DataOrdenacao")
+        )
+
+        fig = px.bar(
+            df_agrupado,
+            x="Mes",
+            y="Valor",
+            color="Operacao",
+            barmode="group",
+            text_auto=".2f",
+            color_discrete_map={"Depósitos": "#2ecc71", "Saques": "#e74c3c"},
+            labels={"Mes": "Mês", "Valor": "Total Movimentado (R$)", "Operacao": "Tipo"},
+            title=f"Saques vs. Depósitos por Mês - Conta {conta.numero}"
+        )
+        return fig.to_html(full_html=False, include_plotlyjs="cdn")
+
+    def GraficoEvolucaoSaldoTransacoes(self, numero_conta: int) -> str:
+        """3. Gráfico de Linhas: Evolução do saldo e transações ao longo do tempo."""
+        conta = self.buscar_conta(int(numero_conta))
+        if not conta:
+            return ""
+
+        # Se houver transações estruturadas, reconstrói a linha do tempo exata
+        if conta.transacoes:
+            transacoes_ordenadas = sorted(conta.transacoes, key=lambda x: x.data)
+            
+            # Calcula o saldo inicial antes da primeira transação registrada
+            variacao_total = sum(
+                t.valor if t.tipo in {"DEPOSITO", "RENDIMENTO"} or (t.tipo == "TRANSFERENCIA" and "recebida" in t.descricao)
+                else -t.valor
+                for t in transacoes_ordenadas
+            )
+            saldo_corrente = conta.saldo - variacao_total
+
+            pontos = []
+            for t in transacoes_ordenadas:
+                if t.tipo in {"DEPOSITO", "RENDIMENTO"} or (t.tipo == "TRANSFERENCIA" and "recebida" in t.descricao):
+                    saldo_corrente += t.valor
+                else:
+                    saldo_corrente -= t.valor
+
+                pontos.append({
+                    "Data": t.data.strftime("%d/%m/%Y %H:%M"),
+                    "Saldo": round(saldo_corrente, 2),
+                    "ValorTransacao": round(t.valor, 2),
+                    "Detalhe": f"{t.tipo} (R$ {t.valor:.2f})"
+                })
+
+            df = pd.DataFrame(pontos)
+            fig = px.line(
+                df,
+                x="Data",
+                y="Saldo",
+                markers=True,
+                hover_data={"Detalhe": True, "ValorTransacao": ":.2f"},
+                labels={"Data": "Data / Hora", "Saldo": "Saldo (R$)"},
+                title=f"Evolução do Saldo e Transações - Conta {conta.numero}"
+            )
+            return fig.to_html(full_html=False, include_plotlyjs="cdn")
+
+        # Fallback caso a conta só tenha os dados iniciais de evolucao_mensal
+        df_fallback = pd.DataFrame(conta.evolucao_mensal)
+        fig = px.line(
+            df_fallback,
+            x="mes",
+            y="valor",
+            markers=True,
+            labels={"mes": "Mês", "valor": "Saldo (R$)"},
+            title=f"Evolução do Saldo - Conta {conta.numero}"
+        )
+        return fig.to_html(full_html=False, include_plotlyjs="cdn")
+    def exportar_json_texto(self) -> str:
+        """Retorna todo o banco de dados formatado como string JSON."""
+        self.salvar_dados()
+        with open(self.arquivo_json, "r", encoding="utf-8") as f:
+            return f.read()
+
+    def exportar_csv_texto(self) -> str:
+        """Exporta as contas e titulares em formato CSV usando pandas."""
+        linhas = []
+        for num, conta in self.lista_contas.items():
+            linhas.append({
+                "numero": conta.numero,
+                "tipo": conta.tipo,
+                "saldo": conta.saldo,
+                "cpf": conta.titular.cpf,
+                "nome": conta.titular.nome,
+                "salario": conta.titular.salario,
+                "telefone": conta.titular.telefone,
+            })
+
+        colunas = ["numero", "tipo", "saldo", "cpf", "nome", "salario", "telefone"]
+        df = pd.DataFrame(linhas, columns=colunas)
+        return df.to_csv(index=False, encoding="utf-8")
+
+    def importar_arquivo(self, arquivo_storage):
+        """Importa dados de um arquivo .json ou .csv enviado pelo formulário."""
+        if not arquivo_storage or arquivo_storage.filename == "":
+            return False, "Nenhum arquivo selecionado."
+
+        nome_arquivo = arquivo_storage.filename.lower()
+
+        try:
+            if nome_arquivo.endswith(".json"):
+                conteudo = arquivo_storage.read().decode("utf-8")
+                dados = json.loads(conteudo)
+
+                if "clientes" not in dados or "contas" not in dados:
+                    return False, "Arquivo JSON inválido: chaves 'clientes' ou 'contas' ausentes."
+
+                with open(self.arquivo_json, "w", encoding="utf-8") as f:
+                    json.dump(dados, f, indent=4, ensure_ascii=False)
+
+                # Limpa a memória atual e recarrega a partir do JSON importado
+                self.lista_clientes.clear()
+                self.lista_contas.clear()
+                self.carregar_dados()
+                return True, "Dados importados do JSON com sucesso!"
+
+            elif nome_arquivo.endswith(".csv"):
+                df = pd.read_csv(arquivo_storage, dtype={"cpf": str, "telefone": str})
+                colunas_necessarias = {"numero", "tipo", "saldo", "cpf", "nome", "salario", "telefone"}
+                if not colunas_necessarias.issubset(set(df.columns)):
+                    return False, f"CSV inválido. Colunas esperadas: {', '.join(sorted(colunas_necessarias))}"
+
+                for _, row in df.iterrows():
+                    cpf = str(row["cpf"]).strip()
+                    cliente = self.cadastrar_cliente(
+                        nome=str(row["nome"]).strip(),
+                        cpf=cpf,
+                        salario=float(row["salario"]),
+                        telefone=str(row["telefone"]).strip(),
+                    )
+                    num_conta = int(row["numero"])
+                    saldo = float(row["saldo"])
+                    tipo = str(row["tipo"]).strip()
+
+                    if num_conta not in self.lista_contas:
+                        self.criar_conta(num_conta, tipo, cliente.cpf, saldo)
+                    else:
+                        self.lista_contas[num_conta]._saldo = saldo
+
+                self.salvar_dados()
+                return True, "Dados importados do CSV com sucesso!"
+
+            else:
+                return False, "Formato não suportado. Envie um arquivo .json ou .csv."
+
+        except Exception as e:
+            return False, f"Erro ao importar arquivo: {e}"
 
 # Instância única da agência do banco
 agencia_central = Agencia("Agência Central", "001")
@@ -531,14 +833,21 @@ def ir_para_historico():
     objeto_conta = agencia_central.buscar_conta(conta)
     
     dados_historico = objeto_conta.exibir_historico_saldo()
-    grafico_evolucao = agencia_central.GraficoEvolucao(conta)
+    
+    # Gera os gráficos da conta e do cliente titular
+    grafico_evolucao = agencia_central.GraficoEvolucaoSaldoTransacoes(conta)
+    grafico_barras = agencia_central.GraficoSaquesDepositosMensais(conta)
+    grafico_pizza_cliente = agencia_central.GraficoPatrimonioCliente(objeto_conta.titular.cpf)
+
     return render_template(
         'historico.html',
         conta_html=conta,
         nome_html=objeto_conta.titular.nome,
         saldo_atual=dados_historico["saldo"],
         historico=dados_historico["historico"],
-        grafico_evolucao_html=grafico_evolucao  # Já disponível para usar no historico.html
+        grafico_evolucao_html=grafico_evolucao,
+        grafico_barras_html=grafico_barras,
+        grafico_pizza_html=grafico_pizza_cliente
     )
 
 
@@ -620,8 +929,9 @@ def transferir():
 
 @app.route("/ir-painel", methods=["POST"])
 def irpainel():
-    grafico = agencia_central.GraficoPizza()
-    return render_template("painel_contas.html", grafico_html=grafico)
+    grafico_pizza = agencia_central.GraficoPizza()
+    grafico_barras = agencia_central.GraficoMediaSalarial()
+    return render_template("painel_contas.html", grafico_pizza_html=grafico_pizza, grafico_barras_html=grafico_barras)
 
 
 @app.route("/voltar-opcoes", methods=['POST'])
@@ -647,6 +957,40 @@ def voltar_opcoes():
         saldo_atual=objeto_conta.saldo
     )
 
+@app.route("/exportar-dados", methods=["POST"])
+def exportar_dados():
+    formato = request.form.get("formato", "json").lower()
+
+    if formato == "csv":
+        csv_conteudo = agencia_central.exportar_csv_texto()
+        return Response(
+            csv_conteudo,
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=dados_banco.csv"},
+        )
+
+    json_conteudo = agencia_central.exportar_json_texto()
+    return Response(
+        json_conteudo,
+        mimetype="application/json",
+        headers={"Content-Disposition": "attachment; filename=dados_banco.json"},
+    )
+
+
+@app.route("/importar-dados", methods=["POST"])
+def importar_dados():
+    conta = request.form.get("conta")
+    arquivo = request.files.get("arquivo_dados")
+
+    sucesso, mensagem = agencia_central.importar_arquivo(arquivo)
+    flash(mensagem, "success" if sucesso else "danger")
+
+    return render_template(
+        "banco_de_dados.html",
+        contas=agencia_central.lista_contas,
+        patrimonio=agencia_central.calcular_patrimonio_total(),
+        conta_html=conta,
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
